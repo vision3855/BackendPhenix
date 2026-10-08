@@ -55,6 +55,7 @@ export async function createSale({ items, cashierId, paymentMethod }) {
         name: product.name,
         sku: product.sku,
         unitPrice: product.sellingPrice,
+        costPrice: product.costPrice, // snapshot so profit stays accurate if cost changes
         quantity: item.quantity,
         lineTotal,
       });

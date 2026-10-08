@@ -6,6 +6,7 @@ const saleItemSchema = new mongoose.Schema(
     name: { type: String, required: true }, // denormalized snapshot
     sku: { type: String, required: true },
     unitPrice: { type: Number, required: true, min: 0 },
+    costPrice: { type: Number, required: true, min: 0, default: 0 }, // snapshot for profit calc
     quantity: { type: Number, required: true, min: 1 },
     lineTotal: { type: Number, required: true, min: 0 },
   },

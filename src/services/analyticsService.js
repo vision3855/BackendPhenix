@@ -34,6 +34,101 @@ export async function salesPerformance({ startDate, endDate }) {
   return result ?? { totalRevenue: 0, totalSales: 0, totalItemsSold: 0 };
 }
 
+/**
+ * Profit report: revenue, cost of goods sold (COGS) and gross profit for the
+ * range, broken down by product.
+ *
+ * The cost basis prefers the `costPrice` snapshot stored on each sale line
+ * (captured at sale time). For sales recorded before snapshots existed it
+ * falls back to the product's current cost price, defaulting to 0 when the
+ * product no longer exists.
+ */
+export async function profitReport({ startDate, endDate }) {
+  const byProduct = await Sale.aggregate([
+    { $match: { soldAt: { $gte: startDate, $lte: endDate } } },
+    { $unwind: '$items' },
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'items.product',
+        foreignField: '_id',
+        as: 'productDoc',
+      },
+    },
+    { $unwind: { path: '$productDoc', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        unitCost: {
+          $ifNull: ['$items.costPrice', { $ifNull: ['$productDoc.costPrice', 0] }],
+        },
+      },
+    },
+    {
+      $addFields: {
+        lineRevenue: '$items.lineTotal',
+        lineCost: { $multiply: ['$unitCost', '$items.quantity'] },
+      },
+    },
+    {
+      $group: {
+        _id: '$items.product',
+        name: { $first: '$items.name' },
+        sku: { $first: '$items.sku' },
+        quantitySold: { $sum: '$items.quantity' },
+        revenue: { $sum: '$lineRevenue' },
+        cost: { $sum: '$lineCost' },
+        profit: { $sum: { $subtract: ['$lineRevenue', '$lineCost'] } },
+      },
+    },
+    { $sort: { profit: -1 } },
+    {
+      $project: {
+        _id: 0,
+        productId: '$_id',
+        name: 1,
+        sku: 1,
+        quantitySold: 1,
+        revenue: { $round: ['$revenue', 2] },
+        cost: { $round: ['$cost', 2] },
+        profit: { $round: ['$profit', 2] },
+      },
+    },
+  ]);
+
+  const products = byProduct.map((p) => ({
+    ...p,
+    profitMarginPct: p.revenue > 0 ? Math.round((p.profit / p.revenue) * 10000) / 100 : 0,
+  }));
+
+  const totals = products.reduce(
+    (acc, p) => {
+      acc.totalRevenue += p.revenue;
+      acc.totalCost += p.cost;
+      acc.totalProfit += p.profit;
+      acc.totalItemsSold += p.quantitySold;
+      return acc;
+    },
+    { totalRevenue: 0, totalCost: 0, totalProfit: 0, totalItemsSold: 0 }
+  );
+
+  const round2 = (n) => Math.round(n * 100) / 100;
+
+  return {
+    summary: {
+      totalRevenue: round2(totals.totalRevenue),
+      totalCost: round2(totals.totalCost),
+      totalProfit: round2(totals.totalProfit),
+      profitMarginPct:
+        totals.totalRevenue > 0
+          ? Math.round((totals.totalProfit / totals.totalRevenue) * 10000) / 100
+          : 0,
+      totalItemsSold: totals.totalItemsSold,
+      productCount: products.length,
+    },
+    byProduct: products,
+  };
+}
+
 /** Low-stock products: current stock <= lowStockThreshold (and not archived). */
 export async function lowStockItems() {
   return Product.aggregate([

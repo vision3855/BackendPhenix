@@ -10,6 +10,7 @@ router.use(authenticate, authorize('Admin', 'Manager')); // analytics = managers
 
 router.get('/dashboard', validate({ query: dateRangeQuery }), ctrl.dashboard);
 router.get('/sales-performance', validate({ query: dateRangeQuery }), ctrl.salesPerformance);
+router.get('/profit', validate({ query: dateRangeQuery }), ctrl.profit);
 router.get('/low-stock', ctrl.lowStock);
 router.get('/inventory-valuation', ctrl.inventoryValuation);
 router.get('/top-sellers', validate({ query: dateRangeQuery }), ctrl.topSellers);

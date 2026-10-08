@@ -75,6 +75,7 @@ when a 401 arrives.
 **Analytics (Admin/Manager):**
 - `GET /analytics/dashboard` — everything below in one call
 - `GET /analytics/sales-performance?startDate&endDate`
+- `GET /analytics/profit?startDate&endDate` — revenue, COGS and gross profit (total + per product)
 - `GET /analytics/low-stock`
 - `GET /analytics/inventory-valuation`
 - `GET /analytics/top-sellers?limit=10`

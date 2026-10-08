@@ -16,6 +16,11 @@ export const salesPerformance = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+export const profit = asyncHandler(async (req, res) => {
+  const data = await analytics.profitReport(resolveRange(req.query));
+  res.json({ success: true, data });
+});
+
 export const lowStock = asyncHandler(async (_req, res) => {
   const items = await analytics.lowStockItems();
   res.json({ success: true, data: { count: items.length, items } });
@@ -44,15 +49,23 @@ export const revenueTrend = asyncHandler(async (req, res) => {
 
 export const dashboard = asyncHandler(async (req, res) => {
   const range = resolveRange(req.query);
-  const [performance, lowStockItems, valuation, top, trend] = await Promise.all([
+  const [performance, lowStockItems, valuation, top, trend, profit] = await Promise.all([
     analytics.salesPerformance(range),
     analytics.lowStockItems(),
     analytics.inventoryValuation(),
     analytics.topSellers({ ...range, limit: 5 }),
     analytics.revenueTrend(range),
+    analytics.profitReport(range),
   ]);
   res.json({
     success: true,
-    data: { performance, lowStock: { count: lowStockItems.length, items: lowStockItems }, valuation, topSellers: top, trend },
+    data: {
+      performance,
+      lowStock: { count: lowStockItems.length, items: lowStockItems },
+      valuation,
+      topSellers: top,
+      trend,
+      profit: profit.summary,
+    },
   });
 });
